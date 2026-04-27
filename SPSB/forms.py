@@ -1,18 +1,18 @@
 from django import forms
 from django.forms import inlineformset_factory
-from .models import NewsPost, Media, NewsPostMedia
+from .models import NewsPost, Media, NewsPostMedia, Volunteer, CommitteeMember
 
 
+# =========================
+# MAIN POST FORM
+# =========================
 class NewsPostForm(forms.ModelForm):
     
-    # Custom field to handle multiple media selection
-    media_items = forms.ModelMultipleChoiceField(
-        queryset=Media.objects.all(),
-        required=False,
-        widget=forms.SelectMultiple(attrs={
-            'class': 'form-control'
-        })
-    )
+    publish_now = forms.BooleanField(required=False)
+    new_category = forms.CharField(required=False, max_length=100, widget=forms.TextInput(attrs={
+        'class': 'form-control mt-2',
+        'placeholder': 'New Category'
+    }))
 
     class Meta:
         model = NewsPost
@@ -22,7 +22,6 @@ class NewsPostForm(forms.ModelForm):
             'category',
             'status',
         ]
-
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -34,16 +33,21 @@ class NewsPostForm(forms.ModelForm):
                 'placeholder': 'Write your content...'
             }),
             'category': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-select'
             }),
             'status': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-select'
             }),
         }
 
     def save(self, commit=True, user=None):
-        
         post = super().save(commit=False)
+
+        new_category_name = self.cleaned_data.get('new_category')
+        if new_category_name:
+            from .models import Category
+            category, _ = Category.objects.get_or_create(name=new_category_name)
+            post.category = category
 
         if user:
             post.created_by = user
@@ -51,34 +55,55 @@ class NewsPostForm(forms.ModelForm):
         if commit:
             post.save()
 
-            # Handle ManyToMany through model manually
-            media_items = self.cleaned_data.get('media_items')
-
-            if media_items:
-                for index, media in enumerate(media_items):
-                    NewsPostMedia.objects.create(
-                        post=post,
-                        media=media,
-                        order=index
-                    )
-
         return post
 
 
-
+# =========================
+# MEDIA SECTION FORM
+# =========================
 class NewsPostMediaForm(forms.ModelForm):
+
+    # Allow the admin to upload a section image directly.
+    section_image = forms.ImageField(required=False, widget=forms.ClearableFileInput(attrs={
+        'class': 'form-control'
+    }))
+
+    media = forms.ModelChoiceField(
+        queryset=Media.objects.all(),
+        required=False
+    )
+
     class Meta:
         model = NewsPostMedia
-        fields = ['media', 'caption_override', 'section_text', 'order', 'is_banner']
+        fields = [
+            'media',
+            'caption_override',
+            'section_text',
+            'order',
+            'is_banner'
+        ]
 
         widgets = {
-            'media': forms.Select(attrs={'class': 'form-control'}),
-            'caption_override': forms.TextInput(attrs={'class': 'form-control'}),
-            'section_text': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'order': forms.NumberInput(attrs={'class': 'form-control'}),
+            'media': forms.HiddenInput(attrs={'class': 'media-id-input'}),
+            'caption_override': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter caption'
+            }),
+            'section_text': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Write section text...'
+            }),
+            'order': forms.HiddenInput(),
+            'is_banner': forms.CheckboxInput(attrs={
+                'class': 'form-check-input banner-checkbox'
+            }),
         }
 
 
+# =========================
+# FORMSET
+# =========================
 NewsPostMediaFormSet = inlineformset_factory(
     NewsPost,
     NewsPostMedia,

@@ -23,11 +23,22 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('home/', views.home, name='home'),
     path('news/', views.news, name='news'),
+    path('news/create/', views.create_or_edit_post, name='create_news'),
     path('news/edit/<int:pk>/', views.create_or_edit_post, name='edit_post'),
+    path('news/article/<int:id>/', views.article, name='article'),
     path('news/delete/<int:id>/', views.delete_post, name='delete_post'),
+    path('media/upload/', views.upload_media, name='upload_media'),
+    path('media/list/', views.media_list, name='media_list'),
+    path('volunteers/', views.volunteers, name='volunteers'),
+    path('committees/', views.committees, name='committees'),
+    path("dashboard/", views.dashboard, name="dashboard"),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
+    path('upload-volunteers/', views.upload_volunteers_excel, name='upload_volunteers_excel'),
+    path('upload-committee/', views.upload_committee_excel, name='upload_committee_excel'),
+    path('profile/<str:type>/<int:id>/', views.profile, name='profile'),
 ]
 
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

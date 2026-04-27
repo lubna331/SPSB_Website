@@ -4,81 +4,124 @@
 {% block page_title %}Create News{% endblock page_title %}
 
 {% block css_links %}
-<link rel="stylesheet" href="{% static 'css/news.css' %}">
+    <link rel="stylesheet" href="{% static 'css/news_form.css' %}">
 {% endblock css_links %}
 
 {% block content %}
 
 <div class="container editor-container mt-4">
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
         {% csrf_token %}
 
         <div class="row">
 
             <!-- LEFT: EDITOR -->
+            <!-- LEFT: EDITOR -->
             <div class="col-lg-8">
 
-                <!-- TITLE -->
+                <!-- 🔥 BANNER IMAGE -->
+                <div class="editor-card mb-4">
+                    <h5>Banner Image</h5>
+
+                    {% if formset.forms.0.instance.media %}
+                        <img src="{{ formset.forms.0.instance.media.file.url }}" class="preview-img mb-2">
+                    {% else %}
+                        <p class="text-muted mb-0">No banner image available yet.</p>
+                    {% endif %}
+                    <p class="small text-muted">Section images below are used for the news content.</p>
+                </div>
+
+                <!-- 🔥 TITLE -->
                 <div class="editor-header mb-3">
                     {{ form.title }}
                 </div>
 
-                <!-- MAIN CONTENT -->
+
+                <!-- 🔥 MAIN CONTENT -->
                 <div class="editor-card mb-4">
                     <label class="mb-2 text-muted">Main Content</label>
                     {{ form.content }}
                 </div>
 
-                <!-- SECTIONS -->
+
+                <!-- 🔥 SECTIONS -->
                 <div class="editor-card">
-                    <h5 class="mb-3">Content Sections</h5>
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <h5 class="mb-0">Content Sections</h5>
+                        <small class="badge bg-warning text-dark">
+                            <i class="fas fa-info-circle"></i>
+                            Only ONE image can be set as banner
+                        </small>
+                    </div>
 
                     {{ formset.management_form }}
 
                     <div id="formset-container">
-                        {% for form in formset %}
-                        <div class="section-block mb-3 formset-item">
 
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <label>Image</label>
-                                    {{ form.media }}
+                        {% for form in formset %}
+                            <div class="section-block mb-4 formset-item">
+
+                                {{ form.id }}
+                                {{ form.media.as_hidden }}
+                                {{ form.order }}
+
+                                <!-- IMAGE -->
+                                <div class="mb-2">
+                                    <label>Section Image</label>
+                                    {{ form.section_image }}
+
+                                    {% if form.instance.media %}
+                                        <img src="{{ form.instance.media.file.url }}" class="preview-img mt-2">
+                                    {% endif %}
                                 </div>
 
-                                <div class="col-md-6">
+                                <!-- CAPTION -->
+                                <div class="mb-2">
                                     <label>Caption</label>
                                     {{ form.caption_override }}
                                 </div>
-                            </div>
 
-                            <div class="mt-2">
-                                <label>Text</label>
-                                {{ form.section_text }}
-                            </div>
-
-                            <div class="d-flex justify-content-between mt-2">
-                                <div>
-                                    <small>Banner</small>
-                                    {{ form.is_banner }}
+                                <!-- TEXT -->
+                                <div class="mb-2">
+                                    <label>Content</label>
+                                    {{ form.section_text }}
                                 </div>
 
-                                <div>
-                                    <small>Order</small>
-                                    {{ form.order }}
+                                <!-- DELETE -->
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        {{ form.DELETE }}
+                                        <label class="form-check-label text-danger">
+                                            Delete Section
+                                        </label>
+                                    </div>
                                 </div>
 
-                                <div class="text-danger">
-                                    {{ form.DELETE }} Delete
+                                <!-- BANNER CHECKBOX -->
+                                <div class="mb-2">
+                                    <div class="form-check form-switch">
+                                        {{ form.is_banner }}
+                                        <label class="form-check-label banner-label" for="{{ form.is_banner.id_for_label }}">
+                                            <i class="fas fa-crown"></i>
+                                            <span>Set as Banner Image</span>
+                                        </label>
+                                    </div>
+                                    <small class="d-block text-muted ms-4 mt-1">
+                                        <i class="fas fa-exclamation-circle"></i>
+                                        This image will be displayed at the top of the article (16:9 ratio recommended)
+                                    </small>
                                 </div>
+
                             </div>
-
-                        </div>
                         {% endfor %}
+
                     </div>
 
-                    <button type="button" class="add-btn mt-2" id="add-form">
-                        + Add New Section
+                    <!-- ADD NEW -->
+                    <button type="button" class="btn btn-outline-primary mt-2" id="add-form">
+                        + Add Another Section
                     </button>
+
                 </div>
 
             </div>
@@ -88,36 +131,50 @@
 
                 <div class="publish-bar">
 
-                    <div class="editor-card mb-3">
-                        <h6>Publish</h6>
-
-                        <div class="form-check">
-                            {{ form.publish_now }}
-                            <label>Publish now</label>
-                        </div>
-
-                        <div class="mt-2">
-                            {{ form.status }}
+                    <!-- STATUS CARD -->
+                    <div class="editor-card status-card mb-3 p-3">
+                        <h6 class="mb-3">Status</h6>
+                        <div class="status-buttons d-flex gap-2 flex-wrap">
+                            {% for value, label in form.status.field.choices %}
+                            <label class="btn btn-outline-secondary status-btn status-{{ value }} {% if form.status.value == value %} active {% endif %}" data-status="{{ value }}">
+                                <input type="radio" name="status" value="{{ value }}" {% if form.status.value == value %}checked{% endif %} class="d-none">
+                                {{ label | title }}
+                            </label>
+                            {% endfor %}
                         </div>
                     </div>
 
-                    <div class="editor-card mb-3">
-                        <h6>Category</h6>
-                        {{ form.category }}
+                    <!-- CATEGORY CARD -->
+                    <div class="editor-card category-card mb-3 p-3">
+                        <h6 class="mb-3">Category</h6>
+                        <!-- Existing Categories -->
+                        <div class="category-pills d-flex gap-2 flex-wrap mb-3">
+                            {% for cat in form.category.field.queryset %}
+                            <label class="category-pill {% if form.category.value == cat.id %}active{% endif %}">
+                                <input type="radio" name="category" value="{{ cat.id }}" {% if form.category.value == cat.id %}checked{% endif %} class="d-none">
+                                {{ cat.name | title }}
+                            </label>
+                            {% endfor %}
+                        </div>
+
+                        <!-- New Category Input -->
+                        <div class="new-category-input">
+                            <label class="small text-muted d-block mb-2">Or create a new category:</label>
+                            {{ form.new_category }}
+                        </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-100">
-                        Save Post
+                    <!-- SAVE -->
+                    <button type="submit" class="btn btn-primary w-100 save-btn">
+                        Save News
                     </button>
-
                 </div>
-
             </div>
-
         </div>
     </form>
 </div>
 
 {% endblock content %}
 
-<script src='{% static "js/news_form.js" %}'></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="{% static 'js/news_form.js' %}"></script>

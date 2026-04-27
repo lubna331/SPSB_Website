@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block page_title %}Volunteers{% endblock page_title %}
+
+{% block css_links %}
+    <link rel="stylesheet" href="{% static 'css/volunteers.css' %}">
+{% endblock css_links %}
+
+{% block content %}
+    <div class="container">
+        <h2 class="text-center my-4">Our Volunteers</h2>
+        {% if request.user.is_staff %}
+            <div class="text-center mb-4">
+                <form method="POST" action="{% url 'upload_volunteers_excel' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <span>
+                        <input type="file" name="file" accept=".xlsx" required class="form-control mb-2 w-auto d-inline-block">
+                    </span>
+                    <button type="submit" class="btn btn-primary">
+                        Upload
+                    </button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+
+
+    <div class="container mt-4">
+        <div class="row">
+
+            <!-- LEFT SIDE: VOLUNTEERS -->
+            <div class="col-lg-9 bg-light p-4 left_panel">
+                <div class="row">
+                {% for volunteer in page_obj %}
+                    <div class="col-12 col-md-6 p-1 col-lg-4 mb-1 card-container">
+                        <a href="{% url 'profile' 'volunteer' volunteer.id %}" class="text-decoration-none text-dark">
+                            <div class="card h-100 shadow-sm volunteer-card">
+
+                                <!-- IMAGE -->
+                                {% if volunteer.profile_image %}
+                                    <img src="{{ volunteer.profile_image.url }}" 
+                                        class="card-img-top" 
+                                        style="height:200px; object-fit:cover;">
+                                {% else %}
+                                    <img src="{% static 'default.jpg' %}" class="card-img-top">
+                                {% endif %}
+
+                                <div class="card-body">
+
+                                    <!-- NAME -->
+                                    <h5 class="card-title">
+                                        {{ volunteer.first_name }} {{ volunteer.last_name }}
+                                    </h5>
+
+                                    <!-- DEGREE + INSTITUTION -->
+                                    <p class="card-text mb-1">
+                                        <small class="text-muted">
+                                            {{ volunteer.degree }} | {{ volunteer.institution }}
+                                        </small>
+                                    </p>
+
+                                    <!-- ROLE -->
+                                    {% if volunteer.role %}
+                                        <span class="badge bg-primary mb-1">
+                                            {{ volunteer.role|title }}
+                                        </span>
+                                    {% endif %}
+
+                                    <!-- ADMIN STATUS -->
+                                    {% if request.user.is_staff %}
+                                        {% if volunteer.status == "active" %}
+                                            <span class="badge bg-success mb-1">Active</span>
+                                        {% elif volunteer.status == "past" %}
+                                            <span class="badge bg-info mb-1">Past</span>
+                                        {% else %}
+                                            <span class="badge bg-danger mb-1">
+                                                {{ volunteer.status|title }}
+                                            </span>
+                                        {% endif %}
+
+                                        <!-- PHONE -->
+                                        <p class="card-text text-muted small mt-2">
+                                            <span><i class="fa-solid fa-user"></i> {{ volunteer.username }}</span> |
+                                            <span><i class="fa-solid fa-phone"></i> {{ volunteer.phone_number }}</span>
+                                        </p>
+                                    {% endif %}
+
+                                </div>
+
+                                <!-- SOCIAL -->
+                                <div class="d-flex justify-content-center flex-wrap pb-3">
+                                    <a {% if volunteer.instagram_handle %} href="https://www.{{ volunteer.instagram_handle }}" target="_blank" {% endif %} class="m-1">
+                                        <i class="fa-brands fa-instagram text-danger"></i>
+                                    </a>
+
+                                    <a {% if volunteer.linkedin_url %} href="{{ volunteer.linkedin_url }}" target="_blank" {% endif %} class="m-1">
+                                        <i class="fa-brands fa-linkedin-in text-primary"></i>
+                                    </a>
+
+                                    <a {% if volunteer.twitter_handle %} href="https://www.{{ volunteer.twitter_handle }}" target="_blank" {% endif %} class="m-1">
+                                        <i class="fa-brands fa-x-twitter text-dark"></i>
+                                    </a>
+
+                                    <a {% if volunteer.facebook_url %} href="{{ volunteer.facebook_url }}" target="_blank" {% endif %} class="m-1">
+                                        <i class="fa-brands fa-facebook text-primary"></i>
+                                    </a>
+                                </div>
+
+                            </div>
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+            </div>
+
+            <!-- RIGHT SIDE: FILTER + SEARCH -->
+            <div class="col-lg-3 col-md-4">
+
+                <div class="filter-panel">
+
+                    <!-- SEARCH -->
+                    <form method="GET">
+                        <input type="text" name="search" placeholder="Search name / phone / username"
+                            value="{{ request.GET.search }}" class="form-control mb-3">
+                    </form>
+
+                    <!-- YEAR FILTER -->
+                    <h6 class="mb-2">Filter by Year</h6>
+
+                    <div class="year-filter">
+                        <a href="{% url 'volunteers' %}"
+                        class="btn btn-sm {% if not selected_year %}active{% endif %}"><i class="fa-solid fa-sliders"></i>
+                            All
+                        </a>
+
+                        {% for year in volunteer_year %}
+                            <a href="?year={{ year }}"
+                            class="btn btn-sm {% if selected_year == year %}active {% endif %}">{{ year }}</a>
+                        {% endfor %}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- PAGINATION -->
+     {% if page_obj.has_other_pages %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+
+                <!-- PREVIOUS -->
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link"
+                        href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}">
+                            &laquo;
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                {% endif %}
+
+                <!-- PAGE NUMBERS -->
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link"
+                            href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                <!-- NEXT -->
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link"
+                        href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}">
+                            &raquo;
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                {% endif %}
+            <ul>
+        </nav>
+    {% endif %}
+
+    {% comment %} {% if page_obj.has_other_pages %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+
+                <!-- PREVIOUS -->
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link"
+                        href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}">
+                            &laquo;
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                {% endif %}
+
+                <!-- PAGE NUMBERS -->
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link"
+                            href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                <!-- NEXT -->
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link"
+                        href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}">
+                            &raquo;
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                {% endif %}
+
+            </ul>
+        </nav>
+    {% endif %} {% endcomment %}
+
+
+{% endblock content %}
+<script src=" {% static 'js/news.js' %} "></script>
+
